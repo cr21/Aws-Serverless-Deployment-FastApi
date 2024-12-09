@@ -4,3 +4,4 @@ torchvision==0.20.0+cpu
 onnx==1.17.0 
 aws-cdk-lib==2.168.0
 gradio
+fastapi[standard]
