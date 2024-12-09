@@ -111,7 +111,6 @@ def preprocess_image(image: Image.Image) -> np.ndarray:
 
     return img_array
 
-
 @app.get("/", response_class=HTMLResponse)
 async def ui_home():
     content = Html(
@@ -123,17 +122,6 @@ async def ui_home():
                 integrity="sha384-0895/pl2MU10Hqc6jd4RvrthNlDiE9U1tWmX7WRESftEDRosgxNsQG/Ze9YMRzHq",
                 crossorigin="anonymous",
             ),
-            Script("""
-                htmx.onLoad(function(content) {
-                    if (content.id === 'prediction-results') {
-                        const predictionRows = content.querySelectorAll('.prediction-row');
-                        predictionRows.forEach((row, index) => {
-                            const confidence = parseFloat(row.dataset.confidence) * 100;
-                            row.querySelector('.confidence-bar').style.width = `${confidence}%`;
-                        });
-                    }
-                });
-            """)
         ),
         Body(
             Div(
@@ -145,7 +133,7 @@ async def ui_home():
                             cls="flex items-center justify-between",
                         ),
                         CardDescription(
-                            "Upload a food image to identify its type. Our AI model will analyze it instantly!"
+                            "Upload a food image to classify it from 100 different food categories!"
                         ),
                     ),
                     CardContent(
@@ -157,7 +145,7 @@ async def ui_home():
                                         name="file",
                                         accept="image/*",
                                         required=True,
-                                        cls="mb-4 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:border-primary file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 file:cursor-pointer",
+                                        cls="mb-4 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 file:cursor-pointer",
                                     ),
                                     P(
                                         "Drag and drop an image or click to browse",
@@ -169,93 +157,96 @@ async def ui_home():
                                     Lucide("sparkles", cls="mr-2 h-4 w-4"),
                                     "Classify Image",
                                     type="submit",
-                                    cls="w-full mt-4",
+                                    cls="w-full",
                                 ),
-                                Div(id="prediction-results", cls="mt-6"),
                                 cls="space-y-4",
                             ),
                             enctype="multipart/form-data",
                             hx_post="/classify",
-                            hx_target="#prediction-results",
+                            hx_target="#result",
                         ),
+                        Div(id="result", cls="mt-6"),
                     ),
                     cls="w-full max-w-3xl shadow-lg",
                     standard=True,
                 ),
-                cls="container flex items-center justify-center min-h-screen p-4 bg-background",
+                Div(
+                    Card(
+                        CardHeader(
+                            CardTitle("Supported Food Categories"),
+                            CardDescription("Our model can classify 100 different food items across various cuisines.")
+                        ),
+                        CardContent(
+                            Div(
+                                Div(
+                                    Div("Desserts & Sweets", cls="text-lg font-semibold mb-2"),
+                                    P("Apple Pie, Baklava, Bread Pudding, Cannoli, Carrot Cake, Chocolate Cake, Chocolate Mousse, Churros, Creme Brulee, Cup Cakes, French Toast, Ice Cream, Macarons, Panna Cotta, Red Velvet Cake, Strawberry Shortcake, Tiramisu, Waffles", cls="text-sm"),
+                                    cls="mb-4"
+                                ),
+                                Div(
+                                    Div("Meat Dishes", cls="text-lg font-semibold mb-2"),
+                                    P("Baby Back Ribs, Beef Carpaccio, Beef Tartare, Chicken Curry, Chicken Quesadilla, Chicken Wings, Filet Mignon, Hamburger, Hot Dog, Huevos Rancheros, Peking Duck, Pork Chop, Prime Rib, Pulled Pork Sandwich, Steak", cls="text-sm"),
+                                    cls="mb-4"
+                                ),
+                                Div(
+                                    Div("Seafood", cls="text-lg font-semibold mb-2"),
+                                    P("Crab Cakes, Fish and Chips, Foie Gras, Lobster Bisque, Lobster Roll Sandwich, Mussels, Oysters, Sashimi, Scallops, Shrimp and Grits, Sushi, Tuna Tartare", cls="text-sm"),
+                                    cls="mb-4"
+                                ),
+                                Div(
+                                    Div("Pasta & Grains", cls="text-lg font-semibold mb-2"),
+                                    P("Gnocchi, Lasagna, Macaroni and Cheese, Pad Thai, Paella, Ravioli, Risotto, Spaghetti Bolognese, Spaghetti Carbonara", cls="text-sm"),
+                                    cls="mb-4"
+                                ),
+                                Div(
+                                    Div("Asian Cuisine", cls="text-lg font-semibold mb-2"),
+                                    P("Bibimbap, Dumplings, Edamame, Gyoza, Miso Soup, Pho, Ramen, Spring Rolls, Takoyaki", cls="text-sm"),
+                                    cls="mb-4"
+                                ),
+                                Div(
+                                    Div("Salads & Appetizers", cls="text-lg font-semibold mb-2"),
+                                    P("Beet Salad, Bruschetta, Caesar Salad, Caprese Salad, Ceviche, Cheese Plate, Greek Salad, Guacamole, Hummus, Nachos, Seaweed Salad", cls="text-sm"),
+                                    cls="mb-4"
+                                ),
+                                Div(
+                                    Div("Breakfast Items", cls="text-lg font-semibold mb-2"),
+                                    P("Breakfast Burrito, Deviled Eggs, Eggs Benedict, French Fries, Omelette, Pancakes", cls="text-sm"),
+                                    cls="mb-4"
+                                ),
+                                Div(
+                                    Div("Sandwiches & Snacks", cls="text-lg font-semibold mb-2"),
+                                    P("Beignets, Club Sandwich, Garlic Bread, Grilled Cheese Sandwich, Onion Rings", cls="text-sm"),
+                                    cls="mb-4"
+                                ),
+                                Div(
+                                    Div("Soups", cls="text-lg font-semibold mb-2"),
+                                    P("Clam Chowder, French Onion Soup, Hot and Sour Soup", cls="text-sm"),
+                                    cls="mb-4"
+                                ),
+                                Div(
+                                    Div("Ethnic & Regional Dishes", cls="text-lg font-semibold mb-2"),
+                                    P("Escargots, Falafel, Samosa", cls="text-sm"),
+                                    cls="mb-4"
+                                ),
+                                Div(
+                                    P("Tip: For best results, center the food item, ensure good lighting, and capture the entire dish.", cls="text-xs text-muted-foreground italic"),
+                                    cls="mt-4 text-center"
+                                ),
+                                cls="grid grid-cols-1 md:grid-cols-2 gap-4"
+                            ),
+                        ),
+                        cls="w-full max-w-3xl mt-6 shadow-lg",
+                        standard=True,
+                    ),
+                ),
+                cls="container flex flex-col items-center justify-center min-h-screen p-4 space-y-6",
             ),
             cls="bg-background text-foreground",
         ),
     )
     return to_xml(content)
 
-# FastAPI routes
-# @app.get("/", response_class=HTMLResponse)
-# async def ui_home():
-#     content = Html(
-#         Head(
-#             Title("Cat vs Dog Classifier"),
-#             ShadHead(tw_cdn=True, theme_handle=True),
-#             Script(
-#                 src="<https://unpkg.com/htmx.org@2.0.3>",
-#                 integrity="sha384-0895/pl2MU10Hqc6jd4RvrthNlDiE9U1tWmX7WRESftEDRosgxNsQG/Ze9YMRzHq",
-#                 crossorigin="anonymous",
-#             ),
-#         ),
-#         Body(
-#             Div(
-#                 Card(
-#                     CardHeader(
-#                         Div(
-#                             CardTitle("Cat vs Dog Classifier 🐱 🐶"),
-#                             Badge("AI Powered", variant="secondary", cls="w-fit"),
-#                             cls="flex items-center justify-between",
-#                         ),
-#                         CardDescription(
-#                             "Upload an image to classify whether it's a cat or a dog. Our AI model will analyze it instantly!"
-#                         ),
-#                     ),
-#                     CardContent(
-#                         Form(
-#                             Div(
-#                                 Div(
-#                                     Input(
-#                                         type="file",
-#                                         name="file",
-#                                         accept="image/*",
-#                                         required=True,
-#                                         cls="mb-4 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 file:cursor-pointer",
-#                                     ),
-#                                     P(
-#                                         "Drag and drop an image or click to browse",
-#                                         cls="text-sm text-muted-foreground text-center mt-2",
-#                                     ),
-#                                     cls="border-2 border-dashed rounded-lg p-4 hover:border-primary/50 transition-colors",
-#                                 ),
-#                                 Button(
-#                                     Lucide("sparkles", cls="mr-2 h-4 w-4"),
-#                                     "Classify Image",
-#                                     type="submit",
-#                                     cls="w-full",
-#                                 ),
-#                                 cls="space-y-4",
-#                             ),
-#                             enctype="multipart/form-data",
-#                             hx_post="/classify",
-#                             hx_target="#result",
-#                         ),
-#                         Div(id="result", cls="mt-6"),
-#                     ),
-#                     cls="w-full max-w-3xl shadow-lg",
-#                     standard=True,
-#                 ),
-#                 cls="container flex items-center justify-center min-h-screen p-4",
-#             ),
-#             cls="bg-background text-foreground",
-#         ),
-#     )
-#     return to_xml(content)
-
+    
 @app.post("/classify", response_class=HTMLResponse)
 async def ui_handle_classify(file: Annotated[bytes, File()]):
     try:
