@@ -111,6 +111,84 @@ def preprocess_image(image: Image.Image) -> np.ndarray:
 
     return img_array
 
+
+@app.get("/", response_class=HTMLResponse)
+async def ui_home():
+    content = Html(
+        Head(
+            Title("Food Image Classifier"),
+            ShadHead(tw_cdn=True, theme_handle=True),
+            Script(
+                src="https://unpkg.com/htmx.org@2.0.3",
+                integrity="sha384-0895/pl2MU10Hqc6jd4RvrthNlDiE9U1tWmX7WRESftEDRosgxNsQG/Ze9YMRzHq",
+                crossorigin="anonymous",
+            ),
+            Script("""
+                htmx.onLoad(function(content) {
+                    if (content.id === 'prediction-results') {
+                        const predictionRows = content.querySelectorAll('.prediction-row');
+                        predictionRows.forEach((row, index) => {
+                            const confidence = parseFloat(row.dataset.confidence) * 100;
+                            row.querySelector('.confidence-bar').style.width = `${confidence}%`;
+                        });
+                    }
+                });
+            """)
+        ),
+        Body(
+            Div(
+                Card(
+                    CardHeader(
+                        Div(
+                            CardTitle("Food Image Classifier 🍽️"),
+                            Badge("AI Powered", variant="secondary", cls="w-fit"),
+                            cls="flex items-center justify-between",
+                        ),
+                        CardDescription(
+                            "Upload a food image to identify its type. Our AI model will analyze it instantly!"
+                        ),
+                    ),
+                    CardContent(
+                        Form(
+                            Div(
+                                Div(
+                                    Input(
+                                        type="file",
+                                        name="file",
+                                        accept="image/*",
+                                        required=True,
+                                        cls="mb-4 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:border-primary file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 file:cursor-pointer",
+                                    ),
+                                    P(
+                                        "Drag and drop an image or click to browse",
+                                        cls="text-sm text-muted-foreground text-center mt-2",
+                                    ),
+                                    cls="border-2 border-dashed rounded-lg p-4 hover:border-primary/50 transition-colors",
+                                ),
+                                Button(
+                                    Lucide("sparkles", cls="mr-2 h-4 w-4"),
+                                    "Classify Image",
+                                    type="submit",
+                                    cls="w-full mt-4",
+                                ),
+                                Div(id="prediction-results", cls="mt-6"),
+                                cls="space-y-4",
+                            ),
+                            enctype="multipart/form-data",
+                            hx_post="/classify",
+                            hx_target="#prediction-results",
+                        ),
+                    ),
+                    cls="w-full max-w-3xl shadow-lg",
+                    standard=True,
+                ),
+                cls="container flex items-center justify-center min-h-screen p-4 bg-background",
+            ),
+            cls="bg-background text-foreground",
+        ),
+    )
+    return to_xml(content)
+
 # FastAPI routes
 # @app.get("/", response_class=HTMLResponse)
 # async def ui_home():
@@ -184,11 +262,48 @@ async def ui_handle_classify(file: Annotated[bytes, File()]):
         response = await predict(file)
         image_b64 = base64.b64encode(file).decode("utf-8")
 
-        predicted_class = sorted(response.predictions.items(), key=lambda x: x[1], reverse=True)[:5]
-        confidence = sorted(response.predictions.values(), reverse=True)[:5] 
-        return JSONResponse(content={"predicted_class": predicted_class, "confidence": confidence})
+        # Sort predictions by confidence
+        sorted_predictions = sorted(response.predictions.items(), key=lambda x: x[1], reverse=True)[:5]
+
+        # Generate HTML for predictions
+        prediction_html = Div(
+            Div(
+                Div(cls="absolute inset-y-0 left-0 bg-primary/20 opacity-50 z-0 confidence-bar"),
+                Div(
+                    f"{pred[0].replace('_', ' ').title()}",
+                    cls="relative z-10 text-sm font-medium"
+                ),
+                Div(
+                    f"{pred[1]*100:.2f}%",
+                    cls="text-xs text-muted-foreground"
+                ),
+                cls=f"prediction-row relative flex justify-between items-center p-2 border-b last:border-b-0 hover:bg-secondary/20 transition-colors",
+                data_confidence=str(pred[1])
+            ) for pred in sorted_predictions
+        )
+
+        # Include the original image
+        image_preview = Div(
+            Img(
+                src=f"data:image/jpeg;base64,{image_b64}",
+                cls="max-w-full max-h-64 object-contain rounded-lg mx-auto mb-4"
+            ),
+            cls="mb-4"
+        )
+
+        return to_xml(Div(
+            image_preview,
+            Div(
+                Div("Top 5 Predictions", cls="text-lg font-semibold mb-3"),
+                prediction_html,
+                cls="bg-background border rounded-lg shadow-sm"
+            )
+        ))
     except Exception as e:
-        print(e)
+        return to_xml(Div(
+            f"Error processing image: {str(e)}",
+            cls="text-red-500 p-4 bg-red-50 rounded-lg"
+        ))
 
 @app.post("/predict", response_model=PredictionResponse)
 async def predict(file: Annotated[bytes, File(description="Image file to classify")]):
