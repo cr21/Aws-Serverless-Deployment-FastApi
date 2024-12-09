@@ -14,7 +14,7 @@ my_environment = Environment(
     account=os.environ["CDK_DEFAULT_ACCOUNT"], region=os.environ["CDK_DEFAULT_REGION"]
 )
 
-class GradioLambda(Stack):
+class FoodImageClassifierFastApiStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
@@ -27,7 +27,7 @@ class GradioLambda(Stack):
         # Create stack and deploy Lambda function
         lambda_fn = DockerImageFunction(
             self,
-            "FoodImageClassifier",
+            "FoodImageClassifierFastApi",
             code=DockerImageCode.from_image_asset(str(Path.cwd()), file="Dockerfile"),
             architecture=Architecture.X86_64,
             memory_size=1536,  # 1.5GB memory
@@ -41,5 +41,5 @@ class GradioLambda(Stack):
         CfnOutput(self, "functionUrl", value=fn_url.url)
 
 app = App()
-gradio_lambda = GradioLambda(app, "GradioLambda", env=my_environment)
+gradio_lambda = FoodImageClassifierFastApiStack(app, "FoodImageClassifierFastApiStack", env=my_environment)
 app.synth()
