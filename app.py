@@ -1,106 +1,224 @@
-import gradio as gr
-import torch
-import torchvision.transforms as transforms
+from typing import Annotated
+import io
+import numpy as np
+import onnxruntime as ort
 from PIL import Image
-import os
-from pathlib import Path
-from gradio.flagging import SimpleCSVLogger
+from fastapi import FastAPI, File, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from fastapi.responses import JSONResponse, HTMLResponse
+from fasthtml import FastHTML
+from fasthtml.common import (
+    Html,
+    Script,
+    Head,
+    Title,
+    Body,
+    Div,
+    Form,
+    Input,
+    Img,
+    P,
+    to_xml,
+)
+from shad4fast import (
+    ShadHead,
+    Card,
+    CardHeader,
+    CardTitle,
+    CardDescription,
+    CardContent,
+    CardFooter,
+    Alert,
+    AlertTitle,
+    AlertDescription,
+    Button,
+    Badge,
+    Separator,
+    Lucide,
+    Progress,
+)
+import base64
 
-class FoodImageClassifier:
-    def __init__(self, model_dir="traced_models/food_101_vit_small",
-                     model_file_name="model.pt",
-                     labels_path='food_101_classes.txt'):
-        self.device = 'cpu'  # Change this to 'cuda' if you have a GPU available
-        # Load the traced model
-        model_full_path = Path(model_dir,model_file_name)
-        self.model = torch.jit.load(model_full_path)
-        self.model = self.model.to(self.device)
-        self.model.eval()
-
-        # Define the same transforms used during training/testing
-        self.transforms = transforms.Compose([
-            transforms.Resize(256),
-            transforms.CenterCrop(224),
-            transforms.ToTensor(),
-            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-        ])
-
-        # # Load labels from file
-        # with open(labels_path, 'r') as f:
-        #     self.labels = [line.strip() for line in f.readlines()]
-        self.labels = ['apple_pie', 'baby_back_ribs', 'baklava', 'beef_carpaccio', 'beef_tartare', 'beet_salad', 'beignets', 'bibimbap', 'bread_pudding', 'breakfast_burrito', 'bruschetta', 'caesar_salad', 'cannoli', 'caprese_salad', 'carrot_cake', 'ceviche', 'cheese_plate', 'cheesecake', 'chicken_curry', 'chicken_quesadilla', 'chicken_wings', 'chocolate_cake', 'chocolate_mousse', 'churros', 'clam_chowder', 'club_sandwich', 'crab_cakes', 'creme_brulee', 'croque_madame', 'cup_cakes', 'deviled_eggs', 'donuts', 'dumplings', 'edamame', 'eggs_benedict', 'escargots', 'falafel', 'filet_mignon', 'fish_and_chips', 'foie_gras', 'french_fries', 'french_onion_soup', 'french_toast', 'fried_calamari', 'fried_rice', 'frozen_yogurt', 'garlic_bread', 'gnocchi', 'greek_salad', 'grilled_cheese_sandwich', 'grilled_salmon', 'guacamole', 'gyoza', 'hamburger', 'hot_and_sour_soup', 'hot_dog', 'huevos_rancheros', 'hummus', 'ice_cream', 'lasagna', 'lobster_bisque', 'lobster_roll_sandwich', 'macaroni_and_cheese', 'macarons', 'miso_soup', 'mussels', 'nachos', 'omelette', 'onion_rings', 'oysters', 'pad_thai', 'paella', 'pancakes', 'panna_cotta', 'peking_duck', 'pho', 'pizza', 'pork_chop', 'poutine', 'prime_rib', 'pulled_pork_sandwich', 'ramen', 'ravioli', 'red_velvet_cake', 'risotto', 'samosa', 'sashimi', 'scallops', 'seaweed_salad', 'shrimp_and_grits', 'spaghetti_bolognese', 'spaghetti_carbonara', 'spring_rolls', 'steak', 'strawberry_shortcake', 'sushi', 'tacos', 'takoyaki', 'tiramisu', 'tuna_tartare', 'waffles']
-        
-    @torch.no_grad()
-    def predict(self, image):
-        if image is None:
-            return None
-        
-        # Convert to PIL Image if needed
-        if not isinstance(image, Image.Image):
-            image = Image.fromarray(image).convert('RGB')
-        
-        # Preprocess image
-        img_tensor = self.transforms(image).unsqueeze(0).to(self.device)
-        
-        # Get prediction
-        output = self.model(img_tensor)
-        probabilities = torch.nn.functional.softmax(output[0], dim=0)
-        probs, indices = torch.topk(probabilities, k=5)
-        print(f"Top 5 predictions:")
-        for idx, prob in zip(indices, probs):
-            print(f"idx: {idx}, label : {self.labels[idx]} , prob: {prob.item() * 100:.2f}%")  # Format probability to 2 decimal places)
-        return {
-            self.labels[idx]: float(prob)
-            for idx, prob in zip(indices, probs)
-        }
-
-# Create classifier instance
-classifier = FoodImageClassifier()
-
-# Format available classes into HTML table - 10 per row
-formatted_classes = ['<tr>']
-for i, label in enumerate(classifier.labels):
-    if i > 0 and i % 10 == 0:
-        formatted_classes.append('</tr><tr>')
-    formatted_classes.append(f'<td>{label}</td>')
-formatted_classes.append('</tr>')
-
-# Create HTML table with styling
-table_html = f"""
-<style>
-    .food-classes-table {{
-        width: 100%;
-        border-collapse: collapse;
-        margin: 10px 0;
-    }}
-    .food-classes-table td {{
-        padding: 6px;
-        text-align: center;
-        border: 1px solid var(--border-color-primary);
-        font-size: 14px;
-        color: var(--body-text-color);
-    }}
-    .food-classes-table tr td {{
-        background-color: var(--background-fill-primary);
-    }}
-</style>
-<table class="food-classes-table">
-    {''.join(formatted_classes)}
-</table>
-"""
-
-# Create Gradio interface
-demo = gr.Interface(
-    fn=classifier.predict,
-    inputs=gr.Image(),
-    outputs=gr.Label(num_top_classes=5),
-    title="Food classifier",
-    description="Upload an image to classify Food Images",
-    flagging_mode="never",
-    flagging_callback=SimpleCSVLogger(),
-    article=f"Available food classes:\n{table_html}"
+# Create main FastAPI app
+app = FastAPI(
+    title="Food Image Classification API",
+    description="FastAPI application serving an ONNX model for Food image classification",
+    version="1.0.0",
 )
 
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Model configuration
+INPUT_SIZE = (224, 224)
+MEAN = np.array([0.485, 0.456, 0.406])
+STD = np.array([0.229, 0.224, 0.225])
+LABELS = ['apple_pie', 'baby_back_ribs', 'baklava', 'beef_carpaccio', 'beef_tartare', 'beet_salad', 'beignets', 'bibimbap', 'bread_pudding', 'breakfast_burrito', 'bruschetta', 'caesar_salad', 'cannoli', 'caprese_salad', 'carrot_cake', 'ceviche', 'cheese_plate', 'cheesecake', 'chicken_curry', 'chicken_quesadilla', 'chicken_wings', 'chocolate_cake', 'chocolate_mousse', 'churros', 'clam_chowder', 'club_sandwich', 'crab_cakes', 'creme_brulee', 'croque_madame', 'cup_cakes', 'deviled_eggs', 'donuts', 'dumplings', 'edamame', 'eggs_benedict', 'escargots', 'falafel', 'filet_mignon', 'fish_and_chips', 'foie_gras', 'french_fries', 'french_onion_soup', 'french_toast', 'fried_calamari', 'fried_rice', 'frozen_yogurt', 'garlic_bread', 'gnocchi', 'greek_salad', 'grilled_cheese_sandwich', 'grilled_salmon', 'guacamole', 'gyoza', 'hamburger', 'hot_and_sour_soup', 'hot_dog', 'huevos_rancheros', 'hummus', 'ice_cream', 'lasagna', 'lobster_bisque', 'lobster_roll_sandwich', 'macaroni_and_cheese', 'macarons', 'miso_soup', 'mussels', 'nachos', 'omelette', 'onion_rings', 'oysters', 'pad_thai', 'paella', 'pancakes', 'panna_cotta', 'peking_duck', 'pho', 'pizza', 'pork_chop', 'poutine', 'prime_rib', 'pulled_pork_sandwich', 'ramen', 'ravioli', 'red_velvet_cake', 'risotto', 'samosa', 'sashimi', 'scallops', 'seaweed_salad', 'shrimp_and_grits', 'spaghetti_bolognese', 'spaghetti_carbonara', 'spring_rolls', 'steak', 'strawberry_shortcake', 'sushi', 'tacos', 'takoyaki', 'tiramisu', 'tuna_tartare', 'waffles']
+
+# Load the ONNX model
+try:
+    print("Loading ONNX model...")
+    ort_session = ort.InferenceSession("onxx_models/food_101_vit_small/model.onnx")
+    ort_session.run(
+        ["output"], {"input": np.random.randn(1, 3, *INPUT_SIZE).astype(np.float32)}
+    )
+    print("Model loaded successfully")
+except Exception as e:
+    print(f"Error loading model: {str(e)}")
+    raise
+
+class PredictionResponse(BaseModel):
+    """Response model for predictions"""
+
+    predictions: dict  # Change to dict for class probabilities
+    success: bool
+    message: str
+
+def preprocess_image(image: Image.Image) -> np.ndarray:
+    """
+    Preprocess the input image for model inference
+
+    Args:
+        image (PIL.Image): Input image
+
+    Returns:
+        np.ndarray: Preprocessed image array
+    """
+    # Convert to RGB if not already
+    image = image.convert("RGB")
+
+    # Resize
+    image = image.resize(INPUT_SIZE)
+
+    # Convert to numpy array and normalize
+    img_array = np.array(image).astype(np.float32) / 255.0
+
+    # Apply mean and std normalization
+    img_array = (img_array - MEAN) / STD
+
+    # Transpose to channel-first format (NCHW)
+    img_array = img_array.transpose(2, 0, 1)
+
+    # Add batch dimension
+    img_array = np.expand_dims(img_array, 0)
+
+    return img_array
+
+# FastAPI routes
+# @app.get("/", response_class=HTMLResponse)
+# async def ui_home():
+#     content = Html(
+#         Head(
+#             Title("Cat vs Dog Classifier"),
+#             ShadHead(tw_cdn=True, theme_handle=True),
+#             Script(
+#                 src="<https://unpkg.com/htmx.org@2.0.3>",
+#                 integrity="sha384-0895/pl2MU10Hqc6jd4RvrthNlDiE9U1tWmX7WRESftEDRosgxNsQG/Ze9YMRzHq",
+#                 crossorigin="anonymous",
+#             ),
+#         ),
+#         Body(
+#             Div(
+#                 Card(
+#                     CardHeader(
+#                         Div(
+#                             CardTitle("Cat vs Dog Classifier 🐱 🐶"),
+#                             Badge("AI Powered", variant="secondary", cls="w-fit"),
+#                             cls="flex items-center justify-between",
+#                         ),
+#                         CardDescription(
+#                             "Upload an image to classify whether it's a cat or a dog. Our AI model will analyze it instantly!"
+#                         ),
+#                     ),
+#                     CardContent(
+#                         Form(
+#                             Div(
+#                                 Div(
+#                                     Input(
+#                                         type="file",
+#                                         name="file",
+#                                         accept="image/*",
+#                                         required=True,
+#                                         cls="mb-4 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 file:cursor-pointer",
+#                                     ),
+#                                     P(
+#                                         "Drag and drop an image or click to browse",
+#                                         cls="text-sm text-muted-foreground text-center mt-2",
+#                                     ),
+#                                     cls="border-2 border-dashed rounded-lg p-4 hover:border-primary/50 transition-colors",
+#                                 ),
+#                                 Button(
+#                                     Lucide("sparkles", cls="mr-2 h-4 w-4"),
+#                                     "Classify Image",
+#                                     type="submit",
+#                                     cls="w-full",
+#                                 ),
+#                                 cls="space-y-4",
+#                             ),
+#                             enctype="multipart/form-data",
+#                             hx_post="/classify",
+#                             hx_target="#result",
+#                         ),
+#                         Div(id="result", cls="mt-6"),
+#                     ),
+#                     cls="w-full max-w-3xl shadow-lg",
+#                     standard=True,
+#                 ),
+#                 cls="container flex items-center justify-center min-h-screen p-4",
+#             ),
+#             cls="bg-background text-foreground",
+#         ),
+#     )
+#     return to_xml(content)
+
+@app.post("/classify", response_class=HTMLResponse)
+async def ui_handle_classify(file: Annotated[bytes, File()]):
+    try:
+        response = await predict(file)
+        image_b64 = base64.b64encode(file).decode("utf-8")
+
+        predicted_class = sorted(response.predictions.items(), key=lambda x: x[1], reverse=True)[:5]
+        confidence = sorted(response.predictions.values(), reverse=True)[:5] 
+        return JSONResponse(content={"predicted_class": predicted_class, "confidence": confidence})
+    except Exception as e:
+        print(e)
+
+@app.post("/predict", response_model=PredictionResponse)
+async def predict(file: Annotated[bytes, File(description="Image file to classify")]):
+    try:
+        image = Image.open(io.BytesIO(file))
+        processed_image = preprocess_image(image)
+
+        outputs = ort_session.run(
+            ["output"], {"input": processed_image.astype(np.float32)}
+        )
+
+        logits = outputs[0][0]
+        probabilities = np.exp(logits) / np.sum(np.exp(logits))
+
+        predictions = {LABELS[i]: float(prob) for i, prob in enumerate(probabilities)}
+
+        return PredictionResponse(
+            predictions=predictions, success=True, message="Classification successful"
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing image: {str(e)}")
+
+@app.get("/health")
+async def health_check():
+    return JSONResponse(
+        content={"status": "healthy", "model_loaded": True}, status_code=200
+    )
 
 if __name__ == "__main__":
-    demo.launch(server_name="0.0.0.0", server_port=8080) 
+    import uvicorn
+
+    uvicorn.run(app, host="0.0.0.0", port=8000)
