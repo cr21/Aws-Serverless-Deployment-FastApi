@@ -72,9 +72,9 @@ jobs:
         uses: actions/checkout@v4
       - name: install cdk
         run: |
-          sudo apt install nodejs
-          sudo apt install npm
-          npm install -g aws-cdk
+          sudo apt install nodejs -y
+          sudo apt install npm -y
+          sudo npm install -g aws-cdk -y
       - name: docker check
         run:
           docker image ls
