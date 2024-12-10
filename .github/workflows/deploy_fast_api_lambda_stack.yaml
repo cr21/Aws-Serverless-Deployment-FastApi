@@ -70,6 +70,14 @@ jobs:
         run:  aws s3 ls
       - name: Checkout repository
         uses: actions/checkout@v4
+      - name: install cdk
+        run: |
+          sudo apt install nodejs
+          sudo apt install npm
+          npm install -g aws-cdk
+      - name: docker check
+        run:
+          docker image ls
       - name: deploy cdk
         run:  cdk deploy --require-approval never
 
