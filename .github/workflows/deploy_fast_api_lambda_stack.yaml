@@ -59,7 +59,14 @@ jobs:
     steps:
       - name: Hello World
         run:  echo 'Hello World! Chirag!'
-      - name: AWS check if aws credentilas are set up correctly or not
+      - name: Install packages
+        run: |
+          sudo apt-get update 
+          sudo apt-get install unzip
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          sudo ./aws/install
+      - name: AWS Installation check if aws credentilas are set up correctly or not
         run:  aws s3 ls
       - name: Checkout repository
         uses: actions/checkout@v4
