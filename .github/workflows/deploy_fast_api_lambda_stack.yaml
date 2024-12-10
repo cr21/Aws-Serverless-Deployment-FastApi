@@ -90,8 +90,12 @@ jobs:
           pip install constructs
           pip install -r requirements.txt
           python3 --version
+          pip list
       - name: deploy cdk
-        run:  cdk deploy --require-approval never
+        run:  |
+          pip list
+          cdk bootstrap
+          cdk deploy --require-approval never
 
 
   stop-runner:
