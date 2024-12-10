@@ -68,16 +68,19 @@ jobs:
           sudo ./aws/install
       - name: AWS Installation check if aws credentilas are set up correctly or not
         run:  aws s3 ls
-      - name: Checkout repository
-        uses: actions/checkout@v4
       - name: install cdk
         run: |
           sudo apt install nodejs -y
           sudo apt install npm -y
           sudo npm install -g aws-cdk -y
-      - name: docker check
-        run:
+          sudo apt install curl -y
+      - name: Install Docker
+        run: |
+          curl -fsSL https://get.docker.com -o get-docker.sh  # Download Docker installation script
+          sh get-docker.sh  # Run the installation script
           docker image ls
+      - name: Checkout repository
+        uses: actions/checkout@v4
       - name: deploy cdk
         run:  cdk deploy --require-approval never
 
