@@ -27,26 +27,6 @@ jobs:
           ec2-instance-type: t3.large
           subnet-id: subnet-0fbb0a4e45e210015
           security-group-id: sg-0326e5442e2817762
-          # pre-runner-script: |
-          #       sudo apt update -y && \
-          #       sudo apt-get install -y unzip
-          #       curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"  # Download AWS CLI
-          #       unzip awscliv2.zip  # Unzip the downloaded file
-          #       sudo ./aws/install  # Install AWS CLI
-          #       sudo ./aws/install --update
-          #       curl -fsSL https://get.docker.com -o get-docker.sh  # Download Docker installation script
-          #       sh get-docker.sh  # Run the installation script
-          #       # Set up AWS credentials and region
-          #       mkdir -p ~/.aws && \
-          #       echo "[default]" > ~/.aws/config && \
-          #       echo "region=us-east-1" >> ~/.aws/config && \  # Set the region
-          #       echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> ~/.aws/credentials && \
-          #       echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> ~/.aws/credentials
-          #       sudo apt-get install nodejs
-          #       sudo apt-get install npm
-          #       sudo npm install -g aws-cdk
-          #       sudo apt install python3.12-venv
-
   deploy-cdk-lambda:
     name: Deploy cdk
     needs: start-runner
@@ -63,9 +43,6 @@ jobs:
         run: |
           sudo apt-get update 
           sudo apt-get install unzip
-          # curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-          # unzip awscliv2.zip
-          # sudo ./aws/install
       - name: AWS Installation check if aws credentilas are set up correctly or not
         run:  aws s3 ls
       - name: install cdk
@@ -76,38 +53,27 @@ jobs:
           sudo systemctl start docker
           sudo systemctl enable docker
           docker image ls
-          # sudo apt install nodejs -y
-          # sudo apt install npm -y
-          # sudo npm install -g aws-cdk -y
-          # sudo apt install curl -y
-      # - name: Install Docker
-      #   run: |
-      #     curl -fsSL https://get.docker.com -o get-docker.sh  # Download Docker installation script
-      #     sh get-docker.sh  # Run the installation script
-      #     docker image ls
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Install python-venv and activate it and install aws-cdk
         run: |
           sudo apt install python3.12-venv -y
-          python3 -m venv venv
-          source venv/bin/activate
+          # python3 -m venv venv
+          # source venv/bin/activate
           pip install --upgrade pip
-          pip install constructs
-          pip install -r requirements.txt
+          #pip install constructs
+          #pip install -r requirements.txt
           python3 --version
-          pip list
+          #pip list
       - name: deploy cdk
         run:  |
-          pip list
           python3 -m venv my_venv
           source my_venv/bin/activate
+          pip install -r requirements.txt
           pip install fastapi==0.115.5 onnxruntime==1.20.1 numpy==2.1.1 pillow==10.4.0 pydantic==2.9.2 python-fasthtml==0.10.0 shad4fast==1.3.1 constructs>=10.0.0 aws-cdk-lib>=2.0.0
           pip list
           cdk bootstrap
           cdk deploy --require-approval never
-
-
   stop-runner:
     name: Stop self-hosted EC2 runner
     needs:
