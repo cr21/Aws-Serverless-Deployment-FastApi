@@ -81,6 +81,13 @@ jobs:
           docker image ls
       - name: Checkout repository
         uses: actions/checkout@v4
+      - name: Install python-venv and activate it and install aws-cdk
+        run: |
+          sudo apt install python3.12-venv
+          python3 -m venv venv
+          source venv/bin/activate
+          pip install -r requirements.txt
+          python3 --version
       - name: deploy cdk
         run:  cdk deploy --require-approval never
 
