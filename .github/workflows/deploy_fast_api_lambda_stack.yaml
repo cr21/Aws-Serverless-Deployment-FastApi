@@ -70,7 +70,7 @@ jobs:
         run:  aws s3 ls
       - name: install cdk
         run: |
-          nvm --version
+          npm --version
           node --version
           cdk --help
           docker image ls
