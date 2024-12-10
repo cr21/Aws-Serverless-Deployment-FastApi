@@ -17,8 +17,6 @@ RUN pip install --no-cache-dir  -r requirements.txt
 # Copy application code and model
 COPY app.py ./
 COPY icons.py ./
-COPY bird_200_classes.txt ./
-COPY food_101_classes.txt ./
 #COPY traced_models/ ./traced_models/
 COPY onxx_models/ ./onxx_models/
 COPY sample_data/ ./sample_data/
