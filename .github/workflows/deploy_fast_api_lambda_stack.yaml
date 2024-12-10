@@ -55,25 +55,14 @@ jobs:
           docker image ls
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Install python-venv and activate it and install aws-cdk
-        run: |
-          python3 --version
-          # echo "Test Done!!!"
-          # sudo apt install python3.12-venv -y
-          # python3 -m venv venv
-          # source venv/bin/activate
-          # pip install --upgrade pip
-          # pip install constructs
-          # pip install -r requirements.txt
-          python3 --version
-          #pip list
       - name: deploy cdk
         run:  |
+          python3 --version
           python3 -m venv my_venv
           source my_venv/bin/activate
           pip install -r requirements.txt
-          pip install fastapi==0.115.5 onnxruntime==1.20.1 numpy==2.1.1 pillow==10.4.0 pydantic==2.9.2 python-fasthtml==0.10.0 shad4fast==1.3.1 constructs>=10.0.0 aws-cdk-lib>=2.0.0
-          pip list
+          #pip install fastapi==0.115.5 onnxruntime==1.20.1 numpy==2.1.1 pillow==10.4.0 pydantic==2.9.2 python-fasthtml==0.10.0 shad4fast==1.3.1 constructs>=10.0.0 aws-cdk-lib>=2.0.0
+          #pip list
           cdk bootstrap
           cdk deploy --require-approval never
   stop-runner:
