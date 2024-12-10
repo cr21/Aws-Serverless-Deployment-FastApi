@@ -86,12 +86,10 @@ jobs:
           sudo apt install python3.12-venv -y
           python3 -m venv venv
           source venv/bin/activate
+          pip install --upgrade pip
+          pip install constructs
           pip install -r requirements.txt
           python3 --version
-          which python3
-          pip install constructs
-          pip list
-
       - name: deploy cdk
         run:  cdk deploy --require-approval never
 
